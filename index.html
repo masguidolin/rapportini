@@ -1955,6 +1955,7 @@ function drawPDFTable(doc,x,y,totalW,headers,rows,colW=null){
 async function saveAndNew(){
   showLoading('Salvataggio in corso...');
   try{
+    const reopenedId=state._reopenedId||null;
     const toSave={
       ...state,
       foto:(state.foto||[]).map(f=>({name:f.name})),
@@ -1964,17 +1965,18 @@ async function saveAndNew(){
       savedBy:currentUserEmail||'',
     };
     delete toSave._reopenedId;
-    if(state._reopenedId){
-      await db.collection('rapportini').doc(state._reopenedId).set(toSave);
+    if(reopenedId){
+      await db.collection('rapportini').doc(reopenedId).set(toSave);
     } else {
       await db.collection('rapportini').add(toSave);
     }
-    registraPromemoria();
+    // Register promemoria BEFORE initWizard clears state
+    await registraPromemoria(reopenedId);
     LC.del('draft_'+(currentUserEmail||''));
     hideLoading();
     const banner=document.createElement('div');
     banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none;';
-    banner.textContent=state._reopenedId?'✓ Rapportino aggiornato!':'✓ Rapportino salvato e sincronizzato!';
+    banner.textContent=reopenedId?'✓ Rapportino aggiornato!':'✓ Rapportino salvato e sincronizzato!';
     document.body.appendChild(banner);
     setTimeout(()=>banner.remove(), 2800);
     initWizard();
@@ -2057,11 +2059,10 @@ function renderPromemoria(selectedTecnico=null,logs=[]){
   el.innerHTML=html;
 }
 
-async function registraPromemoria(){
+async function registraPromemoria(rapportinoId=null){
   if(!state.nomi||state.nomi.length===0)return;
   try{
     // If updating existing rapportino, delete old promemoria by rapportinoId
-    const rapportinoId=state._reopenedId||null;
     if(rapportinoId){
       const snap=await db.collection('promemoria')
         .where('rapportinoId','==',rapportinoId)
