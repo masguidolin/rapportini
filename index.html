@@ -1989,44 +1989,50 @@ async function saveAndNew(){
 // ============================================================
 function openPromemoria(){
   openModal('modal-promemoria');
-  renderPromemoria();
+  loadAndRenderPromemoria();
 }
 
-function renderPromemoria(selectedTecnico=null){
+async function loadAndRenderPromemoria(){
   const el=document.getElementById('promemoria-content');
   if(!el)return;
-  const logs=LC.get('promemoria_ore',[]);
+  el.innerHTML='<p style="color:var(--text3);text-align:center;padding:20px;">⏳ Caricamento...</p>';
+  try{
+    const snap=await db.collection('promemoria').orderBy('data','asc').get();
+    const logs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderPromemoria(null,logs);
+  }catch(e){
+    el.innerHTML='<p style="color:var(--danger);text-align:center;padding:20px;">Errore: '+e.message+'</p>';
+  }
+}
+
+function renderPromemoria(selectedTecnico=null,logs=[]){
+  const el=document.getElementById('promemoria-content');
+  if(!el)return;
+  window._lastPromemoriaLogs=logs;
   if(logs.length===0){
     el.innerHTML='<p style="color:var(--text3);text-align:center;padding:20px;">Nessun dato. I promemoria vengono registrati automaticamente al salvataggio dei rapportini.</p>';
     return;
   }
-  // Group by tecnico
   const byTecnico={};
   logs.forEach(l=>{
     if(!byTecnico[l.tecnico])byTecnico[l.tecnico]=[];
     byTecnico[l.tecnico].push(l);
   });
   const tecnici=Object.keys(byTecnico).sort();
-
-  // Buttons row
   let html=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
     ${tecnici.map(t=>`
-      <button class="btn btn-sm" 
+      <button class="btn btn-sm"
         style="${t===selectedTecnico?'background:var(--primary);color:#fff;':'background:var(--surface2);color:var(--text);border:1px solid var(--border);'}"
-        onclick="renderPromemoria('${t.replace(/'/g,"\\'")}')">
+        onclick="renderPromemoria('${t.replace(/'/g,"\\'")}',window._lastPromemoriaLogs)">
         ${t}
       </button>`).join('')}
   </div>`;
-
-  if(!selectedTecnico || !byTecnico[selectedTecnico]){
+  if(!selectedTecnico||!byTecnico[selectedTecnico]){
     html+='<p style="color:var(--text3);text-align:center;padding:16px;">Seleziona un tecnico per vedere le sue ore.</p>';
-    el.innerHTML=html;
-    return;
+    el.innerHTML=html;return;
   }
-
   const entries=[...byTecnico[selectedTecnico]].sort((a,b)=>a.data.localeCompare(b.data));
   const totOre=entries.reduce((s,e)=>s+(parseFloat(e.ore)||0),0);
-
   html+=`<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
     <div style="background:var(--primary);color:#fff;padding:8px 12px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;">
       <span>${selectedTecnico}</span><span>Totale: ${totOre}h</span>
@@ -2039,7 +2045,7 @@ function renderPromemoria(selectedTecnico=null){
           <th style="padding:6px 10px;text-align:right;">Ore</th>
         </tr></thead>
         <tbody>
-          ${entries.map((e,i)=>`<tr style="${i%2?'background:var(--surface2);':''}">
+          ${entries.map((e,idx)=>`<tr style="${idx%2?'background:var(--surface2);':''}">
             <td style="padding:5px 10px;white-space:nowrap;">${new Date(e.data+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'})}</td>
             <td style="padding:5px 10px;">${e.cliente}</td>
             <td style="padding:5px 10px;text-align:right;font-weight:600;">${e.ore}h</td>
@@ -2048,34 +2054,41 @@ function renderPromemoria(selectedTecnico=null){
       </table>
     </div>
   </div>`;
-
   el.innerHTML=html;
 }
 
-function registraPromemoria(){
-  // Called after saveAndNew — adds one entry per tecnico
+async function registraPromemoria(){
   if(!state.nomi||state.nomi.length===0)return;
-  const logs=LC.get('promemoria_ore',[]);
-  state.nomi.forEach(n=>{
-    if(!n.nome||!n.ore)return;
-    logs.push({tecnico:n.nome,data:state.data,cliente:state.cliente,ore:parseFloat(n.ore)||0});
-  });
-  LC.set('promemoria_ore',logs);
+  try{
+    const batch=db.batch();
+    state.nomi.forEach(n=>{
+      if(!n.nome)return;
+      const ref=db.collection('promemoria').doc();
+      batch.set(ref,{tecnico:n.nome,data:state.data,cliente:state.cliente,ore:parseFloat(n.ore)||0,savedAt:new Date().toISOString()});
+    });
+    await batch.commit();
+  }catch(e){console.warn('Promemoria save error:',e.message);}
 }
 
-function cancellaMessePrecedente(){
+async function cancellaMessePrecedente(){
   const ora=new Date();
   const mesePre=new Date(ora.getFullYear(),ora.getMonth()-1,1);
   const mesePre_str=mesePre.toLocaleDateString('it-IT',{month:'long',year:'numeric'});
   if(!confirm(`Sei sicuro di voler eliminare tutti i dati di ${mesePre_str}?\nQuesta operazione non è reversibile.`))return;
-  const logs=LC.get('promemoria_ore',[]);
-  const filtered=logs.filter(l=>{
-    const d=new Date(l.data+'T12:00:00');
-    return !(d.getFullYear()===mesePre.getFullYear()&&d.getMonth()===mesePre.getMonth());
-  });
-  LC.set('promemoria_ore',filtered);
-  renderPromemoria();
+  showLoading('Eliminazione...');
+  try{
+    const snap=await db.collection('promemoria').get();
+    const batch=db.batch();
+    snap.docs.forEach(d=>{
+      const dt=new Date((d.data().data||'')+'T12:00:00');
+      if(dt.getFullYear()===mesePre.getFullYear()&&dt.getMonth()===mesePre.getMonth())batch.delete(d.ref);
+    });
+    await batch.commit();
+    hideLoading();
+    loadAndRenderPromemoria();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
 }
+
 
 // ============================================================
 // MOD 5 — MARK AS PRINTED
@@ -2456,10 +2469,18 @@ async function deleteRapportino(i){
   showLoading('Eliminazione...');
   try{
     await db.collection('rapportini').doc(r.id).delete();
-    // Remove matching promemoria entries (same date + same client)
-    const logs=LC.get('promemoria_ore',[]);
-    const filtered=logs.filter(l=>!(l.data===r.data&&l.cliente===r.cliente));
-    LC.set('promemoria_ore',filtered);
+    // Remove matching promemoria entries from Firestore
+    try{
+      const snap=await db.collection('promemoria')
+        .where('data','==',r.data)
+        .where('cliente','==',r.cliente||'')
+        .get();
+      if(!snap.empty){
+        const batch=db.batch();
+        snap.docs.forEach(d=>batch.delete(d.ref));
+        await batch.commit();
+      }
+    }catch(pe){console.warn('Promemoria delete error:',pe.message);}
     _archivioData.splice(i,1);
     hideLoading();renderArchivio();
   }catch(e){hideLoading();alert('Errore: '+e.message);}
