@@ -2060,11 +2060,11 @@ function renderPromemoria(selectedTecnico=null,logs=[]){
 async function registraPromemoria(){
   if(!state.nomi||state.nomi.length===0)return;
   try{
-    // If updating an existing rapportino, delete old promemoria entries first
-    if(state._reopenedId){
+    // If updating existing rapportino, delete old promemoria by rapportinoId
+    const rapportinoId=state._reopenedId||null;
+    if(rapportinoId){
       const snap=await db.collection('promemoria')
-        .where('data','==',state.data)
-        .where('cliente','==',state.cliente||'')
+        .where('rapportinoId','==',rapportinoId)
         .get();
       if(!snap.empty){
         const delBatch=db.batch();
@@ -2077,7 +2077,14 @@ async function registraPromemoria(){
     state.nomi.forEach(n=>{
       if(!n.nome)return;
       const ref=db.collection('promemoria').doc();
-      batch.set(ref,{tecnico:n.nome,data:state.data,cliente:state.cliente,ore:parseFloat(n.ore)||0,savedAt:new Date().toISOString()});
+      batch.set(ref,{
+        tecnico:n.nome,
+        data:state.data,
+        cliente:state.cliente,
+        ore:parseFloat(n.ore)||0,
+        savedAt:new Date().toISOString(),
+        rapportinoId:rapportinoId||ref.id
+      });
     });
     await batch.commit();
   }catch(e){console.warn('Promemoria save error:',e.message);}
@@ -2483,11 +2490,10 @@ async function deleteRapportino(i){
   showLoading('Eliminazione...');
   try{
     await db.collection('rapportini').doc(r.id).delete();
-    // Remove matching promemoria entries from Firestore
+    // Remove matching promemoria entries from Firestore by rapportinoId
     try{
       const snap=await db.collection('promemoria')
-        .where('data','==',r.data)
-        .where('cliente','==',r.cliente||'')
+        .where('rapportinoId','==',r.id)
         .get();
       if(!snap.empty){
         const batch=db.batch();
