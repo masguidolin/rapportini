@@ -2060,6 +2060,19 @@ function renderPromemoria(selectedTecnico=null,logs=[]){
 async function registraPromemoria(){
   if(!state.nomi||state.nomi.length===0)return;
   try{
+    // If updating an existing rapportino, delete old promemoria entries first
+    if(state._reopenedId){
+      const snap=await db.collection('promemoria')
+        .where('data','==',state.data)
+        .where('cliente','==',state.cliente||'')
+        .get();
+      if(!snap.empty){
+        const delBatch=db.batch();
+        snap.docs.forEach(d=>delBatch.delete(d.ref));
+        await delBatch.commit();
+      }
+    }
+    // Add new entries
     const batch=db.batch();
     state.nomi.forEach(n=>{
       if(!n.nome)return;
@@ -2093,16 +2106,17 @@ async function cancellaMessePrecedente(){
 // ============================================================
 // MOD 5 — MARK AS PRINTED
 // ============================================================
-function markAsPrinted(rapportinoId){
-  const printed=LC.get('printed_ids',[]);
-  if(!printed.includes(rapportinoId)){
-    printed.push(rapportinoId);
-    LC.set('printed_ids',printed);
-  }
+async function markAsPrinted(rapportinoId){
+  try{
+    await db.collection('rapportini').doc(rapportinoId).update({printed:true,printedAt:new Date().toISOString(),printedBy:currentUserEmail||''});
+    // Update local archivio data too so badge shows immediately
+    const r=_archivioData.find(x=>x.id===rapportinoId);
+    if(r){r.printed=true;}
+  }catch(e){console.warn('Mark printed error:',e.message);}
 }
 
-function isPrinted(rapportinoId){
-  return (LC.get('printed_ids',[])).includes(rapportinoId);
+function isPrinted(r){
+  return r&&r.printed===true;
 }
 let _archivioData=[];
 
@@ -2146,7 +2160,7 @@ function renderArchivio(){
             const dataLav=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'—';
             const savedAt=r.savedAt?new Date(r.savedAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
             const tecnici=(r.nomi||[]).map(n=>n.nome).join(', ')||'—';
-            const printed=isPrinted(r.id);
+            const printed=isPrinted(r);
             const bg=printed?'background:#f0fdf4;':(i%2===0?'':`background:var(--surface2);`);
             return `<tr style="${bg}border-bottom:1px solid var(--border);">
               <td style="padding:7px 10px;font-weight:600;white-space:nowrap;">${dataLav}${printed?'<span style="font-size:9px;background:#22c55e;color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">✓</span>':''}</td>
