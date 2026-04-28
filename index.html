@@ -429,12 +429,11 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
 <header class="app-header" style="display:none;" id="main-header">
   <div class="logo-wrap"><img id="header-logo" src="" alt="Zanatta Daniele"></div>
   <div class="title-wrap" style="flex:1;">
-    <h1>Rapportino di Lavoro Giornaliero</h1>
+    <h1 id="header-title">Rapportino di Lavoro Giornaliero</h1>
     <p>Elettrotecnica Zanatta Daniele</p>
   </div>
   <div style="padding:0 12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-    <button class="btn btn-sm" style="background:#fff;color:var(--primary);border:none;font-size:11px;font-weight:700;" onclick="openArchivio()">📋 Archivio</button>
-    <button class="btn btn-sm" style="background:#fff;color:var(--primary);border:none;font-size:11px;font-weight:700;" onclick="openPromemoria()">⏱ Ore</button>
+    <button class="btn btn-sm" style="background:#fff;color:var(--primary);border:none;font-size:11px;font-weight:700;" onclick="goHome()">🏠 Home</button>
     <button class="btn btn-sm" style="background:#fff;color:var(--primary);border:none;font-size:11px;font-weight:700;" onclick="openModal('modal-admin')">⚙ Gestione</button>
     <button class="btn btn-sm" style="background:#e74c3c;color:#fff;border:none;font-size:11px;font-weight:700;" onclick="handleLogout()">⏻ Esci</button>
   </div>
@@ -448,6 +447,17 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
     <div class="modal-actions" style="margin-top:12px;">
       <button class="btn btn-sm" style="background:#e74c3c;color:#fff;border:none;" onclick="cancellaMessePrecedente()">🗑 Elimina mese precedente</button>
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-promemoria')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVIO RICHIESTE MATERIALI -->
+<div class="modal-bg" id="modal-archivio-rm">
+  <div class="modal" style="max-width:680px;width:95%;">
+    <h3>📦 Archivio Richieste Materiali</h3>
+    <div id="archivio-rm-content"></div>
+    <div class="modal-actions" style="margin-top:12px;">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-archivio-rm')">Chiudi</button>
     </div>
   </div>
 </div>
@@ -466,7 +476,41 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
   </div>
 </div>
 
-<!-- APP -->
+<!-- HOME SCREEN -->
+<div id="home-screen" style="display:none;padding:20px;max-width:700px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:28px;">
+    <div style="font-size:22px;font-weight:700;color:var(--primary);">Seleziona operazione</div>
+    <div style="font-size:13px;color:var(--text2);margin-top:4px;">Elettrotecnica Zanatta Daniele</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <button onclick="startRapportino()" style="background:#1a3a5c;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(26,58,92,.18);">
+      <span style="font-size:32px;">📋</span>Rapportino
+    </button>
+    <button onclick="startRapportinoVeloce()" style="background:#27ae60;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(39,174,96,.18);">
+      <span style="font-size:32px;">⚡</span>Rapportino Veloce
+    </button>
+    <button onclick="startRichiestaMaternali()" style="background:#e67e22;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(230,126,34,.18);">
+      <span style="font-size:32px;">📦</span>Richiesta Materiali
+    </button>
+    <button onclick="openArchivio()" style="background:#8e44ad;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(142,68,173,.18);">
+      <span style="font-size:32px;">🗂</span>Archivio
+    </button>
+    <button onclick="openPromemoria()" style="background:#2980b9;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(41,128,185,.18);">
+      <span style="font-size:32px;">⏱</span>Ore
+    </button>
+    <button onclick="openModal('modal-admin')" style="background:#7f8c8d;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(127,140,141,.18);">
+      <span style="font-size:32px;">⚙️</span>Gestione
+    </button>
+  </div>
+</div>
+
+<!-- RAPPORTINO VELOCE -->
+<div id="rapportino-veloce-screen" style="display:none;padding:16px;max-width:720px;margin:0 auto;"></div>
+
+<!-- RICHIESTA MATERIALI -->
+<div id="richiesta-materiali-screen" style="display:none;padding:16px;max-width:720px;margin:0 auto;"></div>
+
+<!-- APP (rapportino completo) -->
 <div id="app">
   <div class="steps" id="step-indicator"></div>
   <div id="step-content"></div>
@@ -608,7 +652,7 @@ auth.onAuthStateChanged(async user => {
     currentUserEmail = user.email;
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('main-header').style.display='flex';
-    document.getElementById('app').style.display='block';
+    // Don't set app display here - showView('home') in checkDraft will handle it
     showLoading('Caricamento dati...');
     await initAppData();
     hideLoading();
@@ -618,6 +662,9 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('auth-screen').style.display='flex';
     document.getElementById('main-header').style.display='none';
     document.getElementById('app').style.display='none';
+    document.getElementById('home-screen').style.display='none';
+    document.getElementById('rapportino-veloce-screen').style.display='none';
+    document.getElementById('richiesta-materiali-screen').style.display='none';
     hideLoading();
   }
 });
@@ -691,9 +738,9 @@ function checkDraft(){
   const draft=LC.get(key);
   if(draft && draft.step!==undefined){
     document.getElementById('bozza-banner').classList.add('show');
-  } else {
-    initWizard();
   }
+  // Always show home screen first
+  showView('home');
 }
 
 function loadDraft(){
@@ -1965,13 +2012,15 @@ async function saveAndNew(){
       savedBy:currentUserEmail||'',
     };
     delete toSave._reopenedId;
+    let rapportinoId=reopenedId;
     if(reopenedId){
       await db.collection('rapportini').doc(reopenedId).set(toSave);
     } else {
-      await db.collection('rapportini').add(toSave);
+      const ref=await db.collection('rapportini').add(toSave);
+      rapportinoId=ref.id;
     }
     // Register promemoria BEFORE initWizard clears state
-    await registraPromemoria(reopenedId);
+    await registraPromemoria(rapportinoId, reopenedId!==null);
     LC.del('draft_'+(currentUserEmail||''));
     hideLoading();
     const banner=document.createElement('div');
@@ -2059,17 +2108,17 @@ function renderPromemoria(selectedTecnico=null,logs=[]){
   el.innerHTML=html;
 }
 
-async function registraPromemoria(rapportinoId=null){
+async function registraPromemoria(rapportinoId=null, isUpdate=false){
   if(!state.nomi||state.nomi.length===0)return;
+  if(!rapportinoId)return;
   try{
-    // If updating existing rapportino, delete old promemoria by rapportinoId
-    if(rapportinoId){
-      const snap=await db.collection('promemoria')
-        .where('rapportinoId','==',rapportinoId)
-        .get();
-      if(!snap.empty){
+    // If updating, delete old entries first
+    if(isUpdate){
+      const snap=await db.collection('promemoria').get();
+      const toDelete=snap.docs.filter(d=>d.data().rapportinoId===rapportinoId);
+      if(toDelete.length>0){
         const delBatch=db.batch();
-        snap.docs.forEach(d=>delBatch.delete(d.ref));
+        toDelete.forEach(d=>delBatch.delete(d.ref));
         await delBatch.commit();
       }
     }
@@ -2084,7 +2133,8 @@ async function registraPromemoria(rapportinoId=null){
         cliente:state.cliente,
         ore:parseFloat(n.ore)||0,
         savedAt:new Date().toISOString(),
-        rapportinoId:rapportinoId||ref.id
+        rapportinoId:rapportinoId,
+        tipo:'rapportino'
       });
     });
     await batch.commit();
@@ -2126,7 +2176,555 @@ async function markAsPrinted(rapportinoId){
 function isPrinted(r){
   return r&&r.printed===true;
 }
-let _archivioData=[];
+
+// ============================================================
+// VIEW MANAGEMENT
+// ============================================================
+let currentView='home';
+
+function showView(v){
+  currentView=v;
+  const homeEl=document.getElementById('home-screen');
+  const appEl=document.getElementById('app');
+  const veloceEl=document.getElementById('rapportino-veloce-screen');
+  const matEl=document.getElementById('richiesta-materiali-screen');
+  if(homeEl) homeEl.style.display=v==='home'?'block':'none';
+  if(appEl) appEl.style.display=v==='rapportino'?'block':'none';
+  if(veloceEl) veloceEl.style.display=v==='veloce'?'block':'none';
+  if(matEl) matEl.style.display=v==='materiali'?'block':'none';
+  const titles={home:'Zanatta Daniele',rapportino:'Rapportino di Lavoro',veloce:'Rapportino Veloce',materiali:'Richiesta Materiali'};
+  const titleEl=document.getElementById('header-title');
+  if(titleEl) titleEl.textContent=titles[v]||'';
+}
+
+function goHome(){ showView('home'); }
+
+function startRapportino(){
+  const key='draft_'+(currentUserEmail||'');
+  const draft=LC.get(key);
+  if(draft && draft.step!==undefined){
+    // Show choice modal
+    showView('rapportino');
+    document.getElementById('step-indicator').innerHTML='';
+    document.getElementById('step-content').innerHTML=`
+    <div class="card" style="max-width:460px;margin:40px auto;text-align:center;">
+      <div style="font-size:40px;margin-bottom:12px;">📋</div>
+      <h2 style="margin-bottom:8px;">Rapportino</h2>
+      <p style="color:var(--text2);margin-bottom:24px;">Hai una bozza salvata. Cosa vuoi fare?</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <button class="btn btn-primary" onclick="loadDraft()" style="padding:14px;font-size:14px;">
+          📂 Riprendi bozza salvata
+        </button>
+        <button class="btn btn-outline" onclick="discardDraft()" style="padding:14px;font-size:14px;">
+          ✨ Nuovo rapportino
+        </button>
+        <button class="btn btn-outline" onclick="goHome()" style="padding:10px;font-size:13px;color:var(--text2);">
+          ← Torna alla Home
+        </button>
+      </div>
+    </div>`;
+  } else {
+    showView('rapportino');
+    initWizard();
+  }
+}
+
+function startRapportinoVeloce(){ showView('veloce'); stateVeloce={interventi:[],data:todayStr()}; renderRapportinoVeloce(); }
+
+function startRichiestaMaternali(){ showView('materiali'); stateMaternali={cliente:'',cantiere:'',richiedente:'',materiali:[],_matSearch:null,data:todayStr()}; renderRichiestaMaternali(); }
+
+// ============================================================
+// RAPPORTINO VELOCE
+// ============================================================
+let stateVeloce={interventi:[],data:todayStr()};
+
+function renderRapportinoVeloce(){
+  if(listinoData===null) autoLoadListino();
+  const cc=DB.get('cc',[]);
+  const clienti=[...new Set(cc.map(r=>r.c))].sort();
+  const el=document.getElementById('rapportino-veloce-screen');
+  el.innerHTML=`
+  <div class="card">
+    <h2>⚡ Rapportino Veloce</h2>
+    <div class="form-group" style="margin-bottom:14px;max-width:200px;">
+      <label>Data *</label>
+      <input type="date" id="veloce-data" value="${stateVeloce.data}"
+        onchange="stateVeloce.data=this.value">
+    </div>
+    <div id="veloce-interventi">
+      ${stateVeloce.interventi.map((inv,i)=>buildVeloceCard(inv,i,cc,clienti)).join('')}
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="addVeloceIntervento()">+ Aggiungi intervento</button>
+    <div class="nav-buttons" style="margin-top:20px;">
+      <button class="btn btn-outline" onclick="goHome()">← Home</button>
+      <button class="btn btn-success" onclick="stampaVeloce()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="salvaVeloce()">💾 Salva</button>
+    </div>
+  </div>`;
+}
+
+function buildVeloceCard(inv,i,cc,clienti){
+  const cantieri=inv.cliente?[...new Set(cc.filter(r=>r.c===inv.cliente).map(r=>r.s))]:[];
+  const sottos=inv.cliente&&inv.cantiere?[...new Set(cc.filter(r=>r.c===inv.cliente&&r.s===inv.cantiere).flatMap(r=>r.sub||[]))]:[];
+  return `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <strong style="color:var(--primary);">Intervento ${i+1}</strong>
+      <button class="btn btn-danger btn-xs" onclick="removeVeloceIntervento(${i})">Elimina</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cliente *</label>
+        <select onchange="stateVeloce.interventi[${i}].cliente=this.value;stateVeloce.interventi[${i}].cantiere='';stateVeloce.interventi[${i}].sottocommessa='';renderRapportinoVeloce()">
+          <option value="">— Seleziona —</option>
+          ${clienti.map(c=>`<option value="${c}" ${inv.cliente===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cantiere *</label>
+        <select onchange="stateVeloce.interventi[${i}].cantiere=this.value;stateVeloce.interventi[${i}].sottocommessa='';renderRapportinoVeloce()" ${!inv.cliente?'disabled':''}>
+          <option value="">— Seleziona —</option>
+          ${cantieri.map(c=>`<option value="${c}" ${inv.cantiere===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    ${sottos.length>0?`<div class="form-group" style="margin-bottom:10px;">
+      <label>Sottocommessa</label>
+      <select onchange="stateVeloce.interventi[${i}].sottocommessa=this.value">
+        <option value="">— Nessuna —</option>
+        ${sottos.map(s=>`<option value="${s}" ${inv.sottocommessa===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>`:''}
+    <div class="form-group">
+      <label>Descrizione intervento *</label>
+      <textarea placeholder="Descrivi l'intervento..." rows="2"
+        onchange="stateVeloce.interventi[${i}].descrizione=this.value">${inv.descrizione||''}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tecnico</label>
+        <select onchange="stateVeloce.interventi[${i}].tecnico=this.value">
+          <option value="">— Nessuno —</option>
+          ${DB.get('nomi',[]).map(n=>`<option value="${n}" ${inv.tecnico===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Ore</label>
+        <input type="number" min="0" step="0.5" value="${inv.ore||''}" placeholder="0"
+          onchange="stateVeloce.interventi[${i}].ore=parseFloat(this.value)||0"
+          style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;">
+      </div>
+    </div>
+  </div>`;
+}
+
+function addVeloceIntervento(){
+  stateVeloce.interventi.push({cliente:'',cantiere:'',sottocommessa:'',descrizione:'',tecnico:'',ore:0});
+  renderRapportinoVeloce();
+}
+function removeVeloceIntervento(i){ stateVeloce.interventi.splice(i,1); renderRapportinoVeloce(); }
+
+async function salvaVeloce(){
+  if(stateVeloce.interventi.length===0){alert('Aggiungi almeno un intervento');return;}
+  const miss=stateVeloce.interventi.filter(inv=>!inv.cliente||!inv.cantiere||!inv.descrizione?.trim());
+  if(miss.length){alert('Completa cliente, cantiere e descrizione per tutti gli interventi');return;}
+  showLoading('Salvataggio...');
+  try{
+    const ref=await db.collection('rapportini').add({
+      tipo:'veloce',
+      data:stateVeloce.data,
+      interventi:stateVeloce.interventi,
+      savedAt:new Date().toISOString(),
+      savedBy:currentUserEmail||''
+    });
+    // Register promemoria for each intervento that has a tecnico and ore
+    const batch=db.batch();
+    stateVeloce.interventi.forEach(inv=>{
+      if(!inv.tecnico||!inv.ore)return;
+      const pRef=db.collection('promemoria').doc();
+      batch.set(pRef,{
+        tecnico:inv.tecnico,
+        data:stateVeloce.data,
+        cliente:inv.cliente||'',
+        ore:parseFloat(inv.ore)||0,
+        savedAt:new Date().toISOString(),
+        rapportinoId:ref.id,
+        tipo:'veloce'
+      });
+    });
+    await batch.commit();
+    stateVeloce={interventi:[],data:todayStr()};
+    hideLoading();alert('✓ Salvato!');renderRapportinoVeloce();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
+
+function stampaVeloce(){
+  if(stateVeloce.interventi.length===0){alert('Nessun intervento da stampare');return;}
+  const df=stateVeloce.data?new Date(stateVeloce.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const logoSrc=getLogoSrc();
+  // Portrait layout: each intervento as a card-style row with full details
+  const rows=stateVeloce.interventi.map((inv,i)=>`
+    <tr style="${i%2?'background:#f8f8f8;':''}">
+      <td style="padding:5px 8px;white-space:nowrap;font-weight:600;color:#1a3a5c;">${inv.cliente||'—'}</td>
+      <td style="padding:5px 8px;white-space:nowrap;">${inv.cantiere||'—'}</td>
+      <td style="padding:5px 8px;white-space:nowrap;color:#666;">${inv.sottocommessa||'—'}</td>
+      <td style="padding:5px 8px;">${inv.descrizione||''}</td>
+      <td style="padding:5px 8px;white-space:nowrap;">${inv.tecnico||'—'}</td>
+      <td style="padding:5px 8px;text-align:center;white-space:nowrap;">${inv.ore||'—'}</td>
+    </tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Rapportino Veloce ${df}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:0;padding:8mm;}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #1a3a5c;}
+    .logo-side{display:flex;flex-direction:column;gap:3px;}
+    .logo-box{background:#1a3a5c;padding:4px 8px;border-radius:4px;display:inline-block;}
+    .logo-box img{height:28px;display:block;filter:brightness(0) invert(1);}
+    .co{font-size:7px;line-height:1.6;color:#555;}
+    h2{font-size:13px;color:#1a3a5c;margin:0 0 3px;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{background:#1a3a5c;color:#fff;padding:5px 8px;text-align:left;font-size:10px;}
+    td{border-bottom:1px solid #e8e8e8;vertical-align:top;}
+    @page{size:A4 portrait;margin:8mm;}
+  </style></head><body>
+  <div class="hdr">
+    <div class="logo-side">
+      <div class="logo-box"><img src="${logoSrc}" alt="logo"></div>
+      <div class="co">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV) — TEL 0422 608239</div>
+    </div>
+    <div style="text-align:right;">
+      <h2>RAPPORTINO VELOCE</h2>
+      <div style="font-size:11px;"><strong>DATA:</strong> ${df}</div>
+    </div>
+  </div>
+  <table>
+    <tr>
+      <th>CLIENTE</th>
+      <th>CANTIERE</th>
+      <th>SOTTOCOMMESSA</th>
+      <th>DESCRIZIONE INTERVENTO</th>
+      <th>TECNICO</th>
+      <th style="text-align:center;">ORE</th>
+    </tr>
+    ${rows}
+  </table>
+  <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),300);});<\/script>
+  </body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
+}
+
+// ============================================================
+// RICHIESTA MATERIALI
+// ============================================================
+let stateMaternali={cliente:'',cantiere:'',richiedente:'',materiali:[],_matSearch:null,data:todayStr()};
+
+function renderRichiestaMaternali(){
+  if(listinoData===null) autoLoadListino();
+  const cc=DB.get('cc',[]);
+  const clienti=[...new Set(cc.map(r=>r.c))].sort();
+  const cantieri=stateMaternali.cliente?[...new Set(cc.filter(r=>r.c===stateMaternali.cliente).map(r=>r.s))]:[];
+  const nomi=DB.get('nomi',[]);
+  const sel=stateMaternali._matSearch;
+  const el=document.getElementById('richiesta-materiali-screen');
+  el.innerHTML=`
+  <div class="card">
+    <h2>📦 Richiesta Materiali</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cliente *</label>
+        <select onchange="stateMaternali.cliente=this.value;stateMaternali.cantiere='';renderRichiestaMaternali()">
+          <option value="">— Seleziona —</option>
+          ${clienti.map(c=>`<option value="${c}" ${stateMaternali.cliente===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cantiere *</label>
+        <select onchange="stateMaternali.cantiere=this.value" ${!stateMaternali.cliente?'disabled':''}>
+          <option value="">— Seleziona —</option>
+          ${cantieri.map(c=>`<option value="${c}" ${stateMaternali.cantiere===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Richiesta da parte di</label>
+        <select onchange="stateMaternali.richiedente=this.value">
+          <option value="">— Seleziona —</option>
+          ${nomi.map(n=>`<option value="${n}" ${stateMaternali.richiedente===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" value="${stateMaternali.data}" onchange="stateMaternali.data=this.value"
+          style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;">
+      </div>
+    </div>
+    <div id="rm-mat-list" style="margin:12px 0;">
+      ${stateMaternali.materiali.length===0
+        ?'<p style="color:var(--text3);font-size:12px;">Nessun materiale aggiunto</p>'
+        :stateMaternali.materiali.map((m,mi)=>`
+          <div class="material-item" style="margin-bottom:6px;">
+            <div><div class="mat-code">${m.codice}</div><div class="mat-desc">${m.descrizione}</div></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" min="0.01" step="0.01" value="${m.quantita}"
+                style="width:65px;padding:3px 6px;font-size:13px;font-weight:700;color:var(--primary);border:1.5px solid var(--border);border-radius:5px;text-align:center;"
+                onchange="stateMaternali.materiali[${mi}].quantita=parseFloat(this.value)||1">
+              <button class="btn btn-danger btn-xs" onclick="stateMaternali.materiali.splice(${mi},1);renderRichiestaMaternali()">✕</button>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">Aggiungi materiale</div>
+      <div class="search-wrap" style="margin-bottom:8px;">
+        <input type="text" id="rm-mat-search" placeholder="Cerca materiale..."
+          oninput="onRMSearchInput(this.value)"
+          onblur="setTimeout(()=>{const r=document.getElementById('rm-search-results');if(r)r.classList.add('hidden');},150)"
+          autocomplete="off">
+        <div class="search-results hidden" id="rm-search-results"></div>
+      </div>
+      ${sel?`<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+        <div><div style="font-size:10px;color:var(--text3);">Codice</div><div style="font-size:12px;font-weight:700;color:var(--primary);background:#e8f0f8;padding:4px 8px;border-radius:4px;">${sel.code}</div></div>
+        <div style="flex:1;min-width:140px;"><div style="font-size:10px;color:var(--text3);">Descrizione</div><div style="font-size:11px;background:#e8f0f8;padding:4px 8px;border-radius:4px;">${sel.desc}</div></div>
+        <div><div style="font-size:10px;color:var(--text3);">Qtà</div>
+          <input type="number" id="rm-mat-qty" value="1" min="0.01" step="0.01"
+            style="width:70px;padding:4px 6px;font-size:13px;border:1.5px solid var(--border);border-radius:5px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addRMMat();}">
+        </div>
+        <button class="btn btn-primary btn-xs" onclick="addRMMat()">✓ Aggiungi</button>
+        <button class="btn btn-outline btn-xs" onclick="stateMaternali._matSearch=null;renderRichiestaMaternali()">✕</button>
+      </div>`:''}
+      <button class="btn btn-outline btn-sm" onclick="openRMManuale()">+ Manuale</button>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goHome()">← Home</button>
+      <button class="btn btn-sm" style="background:#8e44ad;color:#fff;border:none;" onclick="openArchivioRM()">🗂 Archivio</button>
+      <button class="btn btn-success" onclick="stampaRM()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="salvaRM()">💾 Salva</button>
+    </div>
+  </div>`;
+}
+
+let _rmSearchTmo=null;
+function onRMSearchInput(q){
+  if(_rmSearchTmo)clearTimeout(_rmSearchTmo);
+  const res=document.getElementById('rm-search-results');
+  if(!res)return;
+  if(!q||q.length<2){res.classList.add('hidden');return;}
+  res.classList.remove('hidden');
+  res.innerHTML='<div class="search-none">Ricerca...</div>';
+  _rmSearchTmo=setTimeout(()=>{
+    const words=q.toUpperCase().split(/\s+/).filter(Boolean);
+    const results=[];
+    const custom=DB.get('listino_custom',[]);
+    for(const item of custom){if(results.length>=60)break;if(words.every(w=>(item.c+' '+item.d).toUpperCase().includes(w)))results.push({...item,custom:true});}
+    if(listinoData){for(let ii=0;ii<listinoData.length&&results.length<60;ii++){const item=listinoData[ii];if(item.custom)continue;if(words.every(w=>(item.c+' '+item.d).toUpperCase().includes(w)))results.push(item);}}
+    if(results.length===0){res.innerHTML='<div class="search-none">Nessun risultato</div>';return;}
+    res.innerHTML='';
+    results.forEach(r=>{
+      const div=document.createElement('div');
+      div.className='search-result-item';
+      div.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:6px;';
+      div.innerHTML=`<div style="flex:1;min-width:0;"><div class="item-code">${r.c}</div><div class="item-desc">${r.d}</div></div>
+        <button class="btn btn-primary btn-xs" style="flex-shrink:0;" onmousedown="event.preventDefault();quickAddRM('${r.c.replace(/'/g,"\\'")}','${r.d.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">+ Aggiungi</button>`;
+      div.addEventListener('mousedown',function(e){
+        if(e.target.tagName==='BUTTON')return;
+        e.preventDefault();
+        stateMaternali._matSearch={code:r.c,desc:r.d};
+        res.classList.add('hidden');
+        renderRichiestaMaternali();
+        setTimeout(()=>{const q=document.getElementById('rm-mat-qty');if(q){q.select();q.focus();}},30);
+      });
+      res.appendChild(div);
+    });
+  },250);
+}
+
+function quickAddRM(code,desc){
+  stateMaternali.materiali.push({codice:code,descrizione:desc,quantita:1});
+  stateMaternali._matSearch=null;
+  const searchEl=document.getElementById('rm-mat-search');
+  const prevQuery=searchEl?searchEl.value:'';
+  renderRichiestaMaternali();
+  setTimeout(()=>{const s=document.getElementById('rm-mat-search');if(s){s.value=prevQuery;s.focus();if(prevQuery.length>=2)onRMSearchInput(prevQuery);}},30);
+}
+
+function addRMMat(){
+  if(!stateMaternali._matSearch)return;
+  const qty=parseFloat(document.getElementById('rm-mat-qty')?.value)||1;
+  stateMaternali.materiali.push({codice:stateMaternali._matSearch.code,descrizione:stateMaternali._matSearch.desc,quantita:qty});
+  stateMaternali._matSearch=null;
+  renderRichiestaMaternali();
+  setTimeout(()=>{const s=document.getElementById('rm-mat-search');if(s){s.value='';s.focus();}},30);
+}
+
+function openRMManuale(){ _currentInvIdx=-1; openModal('modal-mat-manual'); }
+
+async function salvaRM(){
+  if(!stateMaternali.cliente||!stateMaternali.cantiere){alert('Seleziona cliente e cantiere');return;}
+  if(stateMaternali.materiali.length===0){alert('Aggiungi almeno un materiale');return;}
+  showLoading('Salvataggio...');
+  try{
+    const data={...stateMaternali,savedAt:new Date().toISOString(),savedBy:currentUserEmail||''};
+    delete data._editId;
+    if(stateMaternali._editId){
+      await db.collection('richieste_materiali').doc(stateMaternali._editId).set(data);
+    } else {
+      await db.collection('richieste_materiali').add(data);
+    }
+    stateMaternali={cliente:'',cantiere:'',richiedente:'',materiali:[],_matSearch:null,data:todayStr()};
+    hideLoading();
+    alert(stateMaternali._editId?'✓ Richiesta aggiornata!':'✓ Richiesta salvata!');
+    renderRichiestaMaternali();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
+
+function stampaRM(){
+  if(stateMaternali.materiali.length===0){alert('Nessun materiale da stampare');return;}
+  const df=stateMaternali.data?new Date(stateMaternali.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const logoSrc=getLogoSrc();
+  const rows=stateMaternali.materiali.map(m=>`<tr><td>${m.codice}</td><td>${m.descrizione}</td><td style="text-align:center;">${m.quantita}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Richiesta Materiali ${df}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:8mm;}.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a3a5c;}.logo-box{background:#1a3a5c;padding:5px 9px;border-radius:4px;display:inline-block;}.logo-box img{height:30px;display:block;filter:brightness(0) invert(1);}.co{font-size:8px;line-height:1.6;color:#555;margin-top:3px;}h2{font-size:14px;color:#1a3a5c;margin:0 0 3px;}.info{font-size:12px;margin-bottom:10px;display:flex;gap:20px;flex-wrap:wrap;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#1a3a5c;color:#fff;padding:5px 8px;text-align:left;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;}tr:nth-child(even) td{background:#f8f8f8;}@page{size:A4 portrait;margin:8mm;}</style></head><body>
+  <div class="hdr"><div><div class="logo-box"><img src="${logoSrc}" alt="logo"></div><div class="co">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV) — TEL 0422 608239</div></div><div style="text-align:right;"><h2>RICHIESTA MATERIALI</h2><div><strong>DATA:</strong> ${df}</div></div></div>
+  <div class="info"><span><strong>CLIENTE:</strong> ${stateMaternali.cliente||'—'}</span><span><strong>CANTIERE:</strong> ${stateMaternali.cantiere||'—'}</span><span><strong>RICHIESTA DA:</strong> ${stateMaternali.richiedente||'—'}</span></div>
+  <table><tr><th>CODICE</th><th>DESCRIZIONE</th><th style="text-align:center;">QTÀ</th></tr>${rows}</table>
+  <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),300);});<\/script></body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
+}
+
+let _archivioRMData=[];
+
+async function openArchivioRM(){
+  openModal('modal-archivio-rm');
+  const el=document.getElementById('archivio-rm-content');
+  el.innerHTML='<p class="text-muted text-center" style="padding:20px;">Caricamento...</p>';
+  try{
+    const snap=await db.collection('richieste_materiali').orderBy('savedAt','desc').limit(100).get();
+    _archivioRMData=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderArchivioRM();
+  }catch(e){el.innerHTML='<p style="color:var(--danger);padding:20px;">Errore: '+e.message+'</p>';}
+}
+
+function renderArchivioRM(){
+  const el=document.getElementById('archivio-rm-content');
+  if(_archivioRMData.length===0){
+    el.innerHTML='<p class="text-muted text-center" style="padding:20px;">Nessuna richiesta salvata</p>';
+    return;
+  }
+  el.innerHTML=`
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:var(--primary);color:#fff;">
+        <th style="padding:8px 10px;text-align:left;">Data</th>
+        <th style="padding:8px 10px;text-align:left;">Cliente</th>
+        <th style="padding:8px 10px;text-align:left;">Cantiere</th>
+        <th style="padding:8px 10px;text-align:left;">Da</th>
+        <th style="padding:8px 10px;text-align:left;">Mat.</th>
+        <th style="padding:8px 10px;text-align:right;">Azioni</th>
+      </tr></thead>
+      <tbody>
+        ${_archivioRMData.map((r,i)=>{
+          const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'—';
+          const bg=i%2===0?'':`background:var(--surface2);`;
+          return `<tr style="${bg}border-bottom:1px solid var(--border);">
+            <td style="padding:6px 10px;white-space:nowrap;">${df}</td>
+            <td style="padding:6px 10px;">${r.cliente||'—'}</td>
+            <td style="padding:6px 10px;">${r.cantiere||'—'}</td>
+            <td style="padding:6px 10px;">${r.richiedente||'—'}</td>
+            <td style="padding:6px 10px;text-align:center;">${(r.materiali||[]).length}</td>
+            <td style="padding:6px 10px;text-align:right;white-space:nowrap;">
+              <button class="btn btn-xs" style="background:#2980b9;color:#fff;border:none;margin-right:2px;" onclick="apriRM(${i})" title="Apri">👁</button>
+              <button class="btn btn-xs" style="background:#e67e22;color:#fff;border:none;margin-right:2px;" onclick="modificaRM(${i})" title="Modifica">✏️</button>
+              <button class="btn btn-xs" style="background:#27ae60;color:#fff;border:none;margin-right:2px;" onclick="stampaRMArchivio(${i})" title="Stampa">🖨️</button>
+              <button class="btn btn-danger btn-xs" onclick="deleteRM(${i})" title="Elimina">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function stampaRMArchivio(i){
+  const r=_archivioRMData[i];
+  const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const logoSrc=getLogoSrc();
+  const rows=(r.materiali||[]).map(m=>`<tr><td>${m.codice||''}</td><td>${m.descrizione||''}</td><td style="text-align:center;">${m.quantita||1}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Richiesta Materiali ${df}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:8mm;}.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1a3a5c;}.logo-box{background:#1a3a5c;padding:5px 9px;border-radius:4px;display:inline-block;}.logo-box img{height:30px;display:block;filter:brightness(0) invert(1);}.co{font-size:8px;line-height:1.6;color:#555;margin-top:3px;}h2{font-size:14px;color:#1a3a5c;margin:0 0 3px;}.info{font-size:12px;margin-bottom:10px;display:flex;gap:20px;flex-wrap:wrap;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#1a3a5c;color:#fff;padding:5px 8px;text-align:left;font-size:11px;}td{padding:5px 8px;border-bottom:1px solid #e0e0e0;}tr:nth-child(even) td{background:#f8f8f8;}@page{size:A4 portrait;margin:8mm;}</style></head><body>
+  <div class="hdr"><div><div class="logo-box"><img src="${logoSrc}" alt="logo"></div><div class="co">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV) — TEL 0422 608239</div></div><div style="text-align:right;"><h2>RICHIESTA MATERIALI</h2><div><strong>DATA:</strong> ${df}</div></div></div>
+  <div class="info"><span><strong>CLIENTE:</strong> ${r.cliente||'—'}</span><span><strong>CANTIERE:</strong> ${r.cantiere||'—'}</span><span><strong>RICHIESTA DA:</strong> ${r.richiedente||'—'}</span></div>
+  <table><tr><th>CODICE</th><th>DESCRIZIONE</th><th style="text-align:center;">QTÀ</th></tr>${rows}</table>
+  <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),300);});<\/script></body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
+}
+
+async function deleteRM(i){
+  const r=_archivioRMData[i];
+  if(!confirm(`Eliminare la richiesta di "${r.cliente||'?'}" del ${r.data||'?'}?\nNon reversibile.`))return;
+  showLoading('Eliminazione...');
+  try{
+    await db.collection('richieste_materiali').doc(r.id).delete();
+    _archivioRMData.splice(i,1);
+    hideLoading();renderArchivioRM();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
+
+function apriRM(i){
+  const r=_archivioRMData[i];
+  const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const rows=(r.materiali||[]).map((m,mi)=>`
+    <tr style="${mi%2?'background:var(--surface2);':''}">
+      <td style="padding:5px 8px;font-weight:600;color:var(--primary);">${m.codice||''}</td>
+      <td style="padding:5px 8px;">${m.descrizione||''}</td>
+      <td style="padding:5px 8px;text-align:center;font-weight:700;">${m.quantita||1}</td>
+    </tr>`).join('');
+  // Show in a simple overlay
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=`<div style="background:var(--surface);border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="margin:0;color:var(--primary);">📦 Richiesta Materiali</h3>
+      <button class="btn btn-outline btn-sm" onclick="this.closest('div[style*=fixed]').remove()">✕ Chiudi</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;">
+      <span><strong>Data:</strong> ${df}</span>
+      <span><strong>Cliente:</strong> ${r.cliente||'—'}</span>
+      <span><strong>Cantiere:</strong> ${r.cantiere||'—'}</span>
+      <span><strong>Richiesta da:</strong> ${r.richiedente||'—'}</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:var(--primary);color:#fff;">
+        <th style="padding:6px 8px;text-align:left;">Codice</th>
+        <th style="padding:6px 8px;text-align:left;">Descrizione</th>
+        <th style="padding:6px 8px;text-align:center;">Qtà</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function modificaRM(i){
+  const r=_archivioRMData[i];
+  if(!confirm('Aprire questa richiesta in modifica?\nLa richiesta corrente andrà persa.'))return;
+  closeModal('modal-archivio-rm');
+  // Load into stateMaternali for editing
+  stateMaternali={
+    cliente:r.cliente||'',
+    cantiere:r.cantiere||'',
+    richiedente:r.richiedente||'',
+    materiali:JSON.parse(JSON.stringify(r.materiali||[])),
+    _matSearch:null,
+    data:r.data||todayStr(),
+    _editId:r.id
+  };
+  showView('materiali');
+  renderRichiestaMaternali();
+}
+
 
 async function openArchivio(){
   openModal('modal-archivio');
@@ -2211,13 +2809,14 @@ async function riaprRapportino(i){
     }
   }
   state={
-    step:6,
-    cliente:r.cliente||'',cantiere:r.cantiere||'',data:r.data||todayStr(),
+    step:0,
+    cliente:r.cliente||'',cantiere:r.cantiere||'',clienteIndirizzo:r.clienteIndirizzo||'',clienteCfpi:r.clienteCfpi||'',data:r.data||todayStr(),
     nomi:r.nomi||[],materiali:[],interventi,
     discarica:r.discarica||{batterie:'',ferro:'',caviRame:'',tubiNeon:'',plasticaRigida:'',imballaggi:'',lampadine:'',cartone:''},
     automezzo:r.automezzo||'',km:r.km||'',uscita:r.uscita||'',
     tecnico:r.tecnico||'',note:r.note||'',foto:[],_matSearch:null,_reopenedId:r.id
   };
+  showView('rapportino');
   renderStepIndicator();renderStep();
   const banner=document.createElement('div');
   banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a3a5c;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none;';
@@ -2377,6 +2976,10 @@ function stampaPerData(){
   const trovati=_archivioData.filter(r=>r.savedAt&&r.savedAt.startsWith(data));
   if(trovati.length===0){alert('Nessun rapportino salvato il '+new Date(data+'T12:00:00').toLocaleDateString('it-IT'));return;}
   closeModal('modal-stampa-data');
+  // Mark all found rapportini as printed
+  trovati.forEach(r=>{
+    markAsPrinted(r.id);
+  });
 
   // Build combined print page with all rapportini for that date
   const df=new Date(data+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -2491,14 +3094,12 @@ async function deleteRapportino(i){
   showLoading('Eliminazione...');
   try{
     await db.collection('rapportini').doc(r.id).delete();
-    // Remove matching promemoria entries from Firestore by rapportinoId
     try{
-      const snap=await db.collection('promemoria')
-        .where('rapportinoId','==',r.id)
-        .get();
-      if(!snap.empty){
+      const snap=await db.collection('promemoria').get();
+      const toDelete=snap.docs.filter(d=>d.data().rapportinoId===r.id);
+      if(toDelete.length>0){
         const batch=db.batch();
-        snap.docs.forEach(d=>batch.delete(d.ref));
+        toDelete.forEach(d=>batch.delete(d.ref));
         await batch.commit();
       }
     }catch(pe){console.warn('Promemoria delete error:',pe.message);}
@@ -2693,15 +3294,24 @@ function addManualMaterial(){
     DB.set('listino_custom',custom);
     if(listinoData) listinoData.unshift({c:code,d:desc,custom:true});
   }
-  // Add to current intervento
-  const invIdx=_currentInvIdx||0;
-  if(!state.interventi[invIdx]) state.interventi[invIdx]={descrizione:'',ore:0,sottocommessa:'',materiali:[],_matSearch:null};
-  if(!state.interventi[invIdx].materiali) state.interventi[invIdx].materiali=[];
-  state.interventi[invIdx].materiali.push({codice:code,descrizione:desc,quantita:qty});
-  document.getElementById('manual-mat-code').value='';
-  document.getElementById('manual-mat-desc').value='';
-  document.getElementById('manual-mat-qty').value='';
-  closeModal('modal-mat-manual');renderStep3();
+  if(_currentInvIdx===-1){
+    // Richiesta materiali
+    stateMaternali.materiali.push({codice:code,descrizione:desc,quantita:qty});
+    document.getElementById('manual-mat-code').value='';
+    document.getElementById('manual-mat-desc').value='';
+    document.getElementById('manual-mat-qty').value='';
+    closeModal('modal-mat-manual');renderRichiestaMaternali();
+  } else {
+    // Rapportino normale
+    const invIdx=_currentInvIdx||0;
+    if(!state.interventi[invIdx]) state.interventi[invIdx]={descrizione:'',ore:0,sottocommessa:'',materiali:[],_matSearch:null};
+    if(!state.interventi[invIdx].materiali) state.interventi[invIdx].materiali=[];
+    state.interventi[invIdx].materiali.push({codice:code,descrizione:desc,quantita:qty});
+    document.getElementById('manual-mat-code').value='';
+    document.getElementById('manual-mat-desc').value='';
+    document.getElementById('manual-mat-qty').value='';
+    closeModal('modal-mat-manual');renderStep3();
+  }
 }
 
 function addDDT(){
