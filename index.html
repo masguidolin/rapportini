@@ -498,11 +498,14 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
     <button onclick="openPromemoria()" style="background:#2980b9;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(41,128,185,.18);">
       <span style="font-size:32px;">⏱</span>Ore
     </button>
-    <button onclick="openModal('modal-admin')" style="background:#7f8c8d;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(127,140,141,.18);">
-      <span style="font-size:32px;">⚙️</span>Gestione
+    <button onclick="startNota()" style="background:#16a085;color:#fff;border:none;border-radius:12px;padding:28px 16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(22,160,133,.18);">
+      <span style="font-size:32px;">📝</span>Promemoria
     </button>
   </div>
 </div>
+
+<!-- NOTA/PROMEMORIA -->
+<div id="nota-screen" style="display:none;padding:16px;max-width:720px;margin:0 auto;"></div>
 
 <!-- RAPPORTINO VELOCE -->
 <div id="rapportino-veloce-screen" style="display:none;padding:16px;max-width:720px;margin:0 auto;"></div>
@@ -2184,20 +2187,209 @@ let currentView='home';
 
 function showView(v){
   currentView=v;
-  const homeEl=document.getElementById('home-screen');
-  const appEl=document.getElementById('app');
-  const veloceEl=document.getElementById('rapportino-veloce-screen');
-  const matEl=document.getElementById('richiesta-materiali-screen');
-  if(homeEl) homeEl.style.display=v==='home'?'block':'none';
-  if(appEl) appEl.style.display=v==='rapportino'?'block':'none';
-  if(veloceEl) veloceEl.style.display=v==='veloce'?'block':'none';
-  if(matEl) matEl.style.display=v==='materiali'?'block':'none';
-  const titles={home:'Zanatta Daniele',rapportino:'Rapportino di Lavoro',veloce:'Rapportino Veloce',materiali:'Richiesta Materiali'};
+  const ids={home:'home-screen',rapportino:'app',veloce:'rapportino-veloce-screen',materiali:'richiesta-materiali-screen',nota:'nota-screen'};
+  Object.entries(ids).forEach(([key,id])=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=v===key?'block':'none';
+  });
+  const titles={home:'Zanatta Daniele',rapportino:'Rapportino di Lavoro',veloce:'Rapportino Veloce',materiali:'Richiesta Materiali',nota:'Promemoria'};
   const titleEl=document.getElementById('header-title');
   if(titleEl) titleEl.textContent=titles[v]||'';
 }
 
 function goHome(){ showView('home'); }
+
+function startNota(){ showView('nota'); stateNota={cliente:'',cantiere:'',testo:'',data:todayStr(),_editId:null}; renderNota(); }
+
+// ============================================================
+// PROMEMORIA (NOTE)
+// ============================================================
+let stateNota={cliente:'',cantiere:'',testo:'',data:todayStr(),_editId:null};
+
+function renderNota(){
+  const cc=DB.get('cc',[]);
+  const clienti=[...new Set(cc.map(r=>r.c))].sort();
+  const cantieri=stateNota.cliente?[...new Set(cc.filter(r=>r.c===stateNota.cliente).map(r=>r.s))]:[];
+  const el=document.getElementById('nota-screen');
+  el.innerHTML=`
+  <div class="card">
+    <h2>📝 ${stateNota._editId?'Modifica Promemoria':'Nuovo Promemoria'}</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cliente</label>
+        <select onchange="stateNota.cliente=this.value;stateNota.cantiere='';renderNota()">
+          <option value="">— Seleziona (opzionale) —</option>
+          ${clienti.map(c=>`<option value="${c}" ${stateNota.cliente===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cantiere</label>
+        <select onchange="stateNota.cantiere=this.value" ${!stateNota.cliente?'disabled':''}>
+          <option value="">— Seleziona —</option>
+          ${cantieri.map(c=>`<option value="${c}" ${stateNota.cantiere===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label>Data</label>
+      <input type="date" value="${stateNota.data}" onchange="stateNota.data=this.value"
+        style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;max-width:180px;">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Testo promemoria *</label>
+      <textarea id="nota-testo" rows="8" placeholder="Scrivi il promemoria qui..."
+        style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;"
+        onchange="stateNota.testo=this.value">${stateNota.testo||''}</textarea>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goHome()">← Home</button>
+      <button class="btn btn-sm" style="background:#8e44ad;color:#fff;border:none;" onclick="openArchivioNote()">🗂 Archivio</button>
+      <button class="btn btn-success" onclick="stampaNota()">🖨️ Stampa</button>
+      <button class="btn btn-primary" onclick="salvaNota()">💾 Salva</button>
+    </div>
+  </div>`;
+  setTimeout(()=>{const t=document.getElementById('nota-testo');if(t)t.oninput=function(){stateNota.testo=this.value;};},50);
+}
+
+async function salvaNota(){
+  const testo=document.getElementById('nota-testo')?.value.trim();
+  if(!testo){alert('Scrivi il testo del promemoria');return;}
+  stateNota.testo=testo;
+  showLoading('Salvataggio...');
+  try{
+    const data={cliente:stateNota.cliente,cantiere:stateNota.cantiere,testo:stateNota.testo,data:stateNota.data,savedAt:new Date().toISOString(),savedBy:currentUserEmail||''};
+    if(stateNota._editId){
+      await db.collection('note').doc(stateNota._editId).set(data);
+    } else {
+      await db.collection('note').add(data);
+    }
+    hideLoading();
+    alert('✓ Promemoria salvato!');
+    stateNota={cliente:'',cantiere:'',testo:'',data:todayStr(),_editId:null};
+    renderNota();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
+
+function stampaNota(){
+  const testo=document.getElementById('nota-testo')?.value.trim()||stateNota.testo;
+  if(!testo){alert('Nessun testo da stampare');return;}
+  const df=stateNota.data?new Date(stateNota.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const logoSrc=getLogoSrc();
+  stampaNotaHTML({cliente:stateNota.cliente,cantiere:stateNota.cantiere,testo,data:stateNota.data});
+}
+
+function stampaNotaHTML(r){
+  const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const logoSrc=getLogoSrc();
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Promemoria ${df}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:10mm;}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1a3a5c;}
+    .logo-side{display:flex;flex-direction:column;gap:3px;}
+    .logo-box{background:#1a3a5c;padding:5px 9px;border-radius:4px;display:inline-block;}
+    .logo-box img{height:30px;display:block;filter:brightness(0) invert(1);}
+    .co{font-size:8px;line-height:1.6;color:#555;}
+    h2{font-size:14px;color:#1a3a5c;margin:0 0 3px;}
+    .info{font-size:11px;color:#555;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;}
+    .testo{font-size:13px;line-height:1.8;white-space:pre-wrap;border:1px solid #ddd;border-radius:6px;padding:14px;min-height:200px;}
+    @page{size:A4 portrait;margin:10mm;}
+  </style></head><body>
+  <div class="hdr">
+    <div class="logo-side">
+      <div class="logo-box"><img src="${logoSrc}" alt="logo"></div>
+      <div class="co">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV) — TEL 0422 608239</div>
+    </div>
+    <div style="text-align:right;"><h2>PROMEMORIA</h2><div style="font-size:11px;"><strong>DATA:</strong> ${df}</div></div>
+  </div>
+  <div class="info">
+    ${r.cliente?`<span><strong>CLIENTE:</strong> ${r.cliente}</span>`:''}
+    ${r.cantiere?`<span><strong>CANTIERE:</strong> ${r.cantiere}</span>`:''}
+  </div>
+  <div class="testo">${r.testo||''}</div>
+  <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),300);});<\/script>
+  </body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
+}
+
+let _archivioNoteData=[];
+
+async function openArchivioNote(){
+  const el=document.getElementById('nota-screen');
+  el.innerHTML+='<div id="archivio-note-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;"><div style="background:var(--surface);border-radius:12px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.3);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h3 style="margin:0;">🗂 Archivio Promemoria</h3><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'archivio-note-overlay\').remove()">✕ Chiudi</button></div><div id="archivio-note-list">Caricamento...</div></div></div>';
+  try{
+    const snap=await db.collection('note').orderBy('savedAt','desc').limit(100).get();
+    _archivioNoteData=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderArchivioNote();
+  }catch(e){document.getElementById('archivio-note-list').innerHTML='<p style="color:var(--danger);">Errore: '+e.message+'</p>';}
+}
+
+function renderArchivioNote(){
+  const el=document.getElementById('archivio-note-list');
+  if(!el)return;
+  if(_archivioNoteData.length===0){el.innerHTML='<p style="color:var(--text3);text-align:center;padding:20px;">Nessun promemoria salvato</p>';return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:var(--primary);color:#fff;">
+      <th style="padding:7px 10px;text-align:left;">Data</th>
+      <th style="padding:7px 10px;text-align:left;">Cliente</th>
+      <th style="padding:7px 10px;text-align:left;">Cantiere</th>
+      <th style="padding:7px 10px;text-align:left;">Testo</th>
+      <th style="padding:7px 10px;text-align:right;">Azioni</th>
+    </tr></thead>
+    <tbody>
+    ${_archivioNoteData.map((r,i)=>{
+      const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'—';
+      return `<tr style="${i%2?'background:var(--surface2);':''}border-bottom:1px solid var(--border);">
+        <td style="padding:6px 10px;white-space:nowrap;">${df}</td>
+        <td style="padding:6px 10px;">${r.cliente||'—'}</td>
+        <td style="padding:6px 10px;">${r.cantiere||'—'}</td>
+        <td style="padding:6px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(r.testo||'').replace(/"/g,'&quot;')}">${(r.testo||'').substring(0,60)}${r.testo?.length>60?'...':''}</td>
+        <td style="padding:6px 10px;text-align:right;white-space:nowrap;">
+          <button class="btn btn-xs" style="background:#2980b9;color:#fff;border:none;margin-right:2px;" onclick="apriNota(${i})" title="Apri">👁</button>
+          <button class="btn btn-xs" style="background:#e67e22;color:#fff;border:none;margin-right:2px;" onclick="modificaNota(${i})" title="Modifica">✏️</button>
+          <button class="btn btn-xs" style="background:#27ae60;color:#fff;border:none;margin-right:2px;" onclick="stampaNoteArchivio(${i})" title="Stampa">🖨️</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteNota(${i})" title="Elimina">🗑</button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function apriNota(i){
+  const r=_archivioNoteData[i];
+  const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:800;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.innerHTML=`<div style="background:var(--surface);border-radius:12px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:20px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+      <div><strong>${r.cliente||''}</strong>${r.cantiere?' — '+r.cantiere:''}<span style="margin-left:10px;color:var(--text3);font-size:11px;">${df}</span></div>
+      <button class="btn btn-outline btn-xs" onclick="this.closest('div[style*=fixed]').remove()">✕</button>
+    </div>
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.8;border:1px solid var(--border);border-radius:6px;padding:12px;min-height:100px;">${r.testo||''}</div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function modificaNota(i){
+  const r=_archivioNoteData[i];
+  document.getElementById('archivio-note-overlay')?.remove();
+  stateNota={cliente:r.cliente||'',cantiere:r.cantiere||'',testo:r.testo||'',data:r.data||todayStr(),_editId:r.id};
+  renderNota();
+}
+
+function stampaNoteArchivio(i){ stampaNotaHTML(_archivioNoteData[i]); }
+
+async function deleteNota(i){
+  const r=_archivioNoteData[i];
+  if(!confirm('Eliminare questo promemoria?\nNon reversibile.'))return;
+  showLoading('Eliminazione...');
+  try{
+    await db.collection('note').doc(r.id).delete();
+    _archivioNoteData.splice(i,1);
+    hideLoading();renderArchivioNote();
+  }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
 
 function startRapportino(){
   const key='draft_'+(currentUserEmail||'');
@@ -2329,14 +2521,17 @@ async function salvaVeloce(){
   if(miss.length){alert('Completa cliente, cantiere e descrizione per tutti gli interventi');return;}
   showLoading('Salvataggio...');
   try{
-    const ref=await db.collection('rapportini').add({
-      tipo:'veloce',
-      data:stateVeloce.data,
-      interventi:stateVeloce.interventi,
-      savedAt:new Date().toISOString(),
-      savedBy:currentUserEmail||''
-    });
-    // Register promemoria for each intervento that has a tecnico and ore
+    const reopenedId=stateVeloce._reopenedId||null;
+    const docData={tipo:'veloce',data:stateVeloce.data,interventi:stateVeloce.interventi,savedAt:new Date().toISOString(),savedBy:currentUserEmail||''};
+    let rapportinoId;
+    if(reopenedId){
+      await db.collection('rapportini').doc(reopenedId).set(docData);
+      rapportinoId=reopenedId;
+    } else {
+      const ref=await db.collection('rapportini').add(docData);
+      rapportinoId=ref.id;
+    }
+    // Register promemoria for each intervento
     const batch=db.batch();
     stateVeloce.interventi.forEach(inv=>{
       if(!inv.tecnico||!inv.ore)return;
@@ -2347,13 +2542,13 @@ async function salvaVeloce(){
         cliente:inv.cliente||'',
         ore:parseFloat(inv.ore)||0,
         savedAt:new Date().toISOString(),
-        rapportinoId:ref.id,
+        rapportinoId:rapportinoId,
         tipo:'veloce'
       });
     });
     await batch.commit();
     stateVeloce={interventi:[],data:todayStr()};
-    hideLoading();alert('✓ Salvato!');renderRapportinoVeloce();
+    hideLoading();alert(reopenedId?'✓ Aggiornato!':'✓ Salvato!');renderRapportinoVeloce();
   }catch(e){hideLoading();alert('Errore: '+e.message);}
 }
 
@@ -2361,27 +2556,26 @@ function stampaVeloce(){
   if(stateVeloce.interventi.length===0){alert('Nessun intervento da stampare');return;}
   const df=stateVeloce.data?new Date(stateVeloce.data+'T12:00:00').toLocaleDateString('it-IT'):'';
   const logoSrc=getLogoSrc();
-  // Portrait layout: each intervento as a card-style row with full details
   const rows=stateVeloce.interventi.map((inv,i)=>`
     <tr style="${i%2?'background:#f8f8f8;':''}">
-      <td style="padding:5px 8px;white-space:nowrap;font-weight:600;color:#1a3a5c;">${inv.cliente||'—'}</td>
-      <td style="padding:5px 8px;white-space:nowrap;">${inv.cantiere||'—'}</td>
-      <td style="padding:5px 8px;white-space:nowrap;color:#666;">${inv.sottocommessa||'—'}</td>
-      <td style="padding:5px 8px;">${inv.descrizione||''}</td>
-      <td style="padding:5px 8px;white-space:nowrap;">${inv.tecnico||'—'}</td>
-      <td style="padding:5px 8px;text-align:center;white-space:nowrap;">${inv.ore||'—'}</td>
+      <td style="padding:6px 8px;">
+        <div style="font-size:12px;">${inv.descrizione||''}</div>
+        <div style="font-size:10px;color:#1a3a5c;font-weight:700;margin-top:3px;">${inv.cliente||'—'} — ${inv.cantiere||'—'}${inv.sottocommessa?' ('+inv.sottocommessa+')':''}</div>
+        <div style="font-size:10px;color:#666;">👤 ${inv.tecnico||'—'}</div>
+      </td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;white-space:nowrap;vertical-align:top;">${inv.ore||'—'}</td>
     </tr>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>Rapportino Veloce ${df}</title>
   <style>
-    body{font-family:Arial,sans-serif;font-size:11px;margin:0;padding:8mm;}
+    body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:8mm;}
     .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #1a3a5c;}
     .logo-side{display:flex;flex-direction:column;gap:3px;}
     .logo-box{background:#1a3a5c;padding:4px 8px;border-radius:4px;display:inline-block;}
     .logo-box img{height:28px;display:block;filter:brightness(0) invert(1);}
     .co{font-size:7px;line-height:1.6;color:#555;}
     h2{font-size:13px;color:#1a3a5c;margin:0 0 3px;}
-    table{width:100%;border-collapse:collapse;font-size:11px;}
+    table{width:100%;border-collapse:collapse;}
     th{background:#1a3a5c;color:#fff;padding:5px 8px;text-align:left;font-size:10px;}
     td{border-bottom:1px solid #e8e8e8;vertical-align:top;}
     @page{size:A4 portrait;margin:8mm;}
@@ -2398,12 +2592,8 @@ function stampaVeloce(){
   </div>
   <table>
     <tr>
-      <th>CLIENTE</th>
-      <th>CANTIERE</th>
-      <th>SOTTOCOMMESSA</th>
-      <th>DESCRIZIONE INTERVENTO</th>
-      <th>TECNICO</th>
-      <th style="text-align:center;">ORE</th>
+      <th>INTERVENTO / CLIENTE / CANTIERE / TECNICO</th>
+      <th style="width:55px;text-align:center;">ORE</th>
     </tr>
     ${rows}
   </table>
@@ -2412,6 +2602,7 @@ function stampaVeloce(){
   const win=window.open('','_blank','width=900,height=700');
   if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
 }
+
 
 // ============================================================
 // RICHIESTA MATERIALI
@@ -2789,8 +2980,25 @@ function renderArchivio(){
 
 async function riaprRapportino(i){
   const r=_archivioData[i];
-  if(!confirm('Riaprire il rapportino di '+r.cliente+' del '+r.data+'?\nIl rapportino attuale andrà perso.'))return;
+  if(!confirm('Riaprire il rapportino di '+(r.cliente||r.data||'?')+'?\nIl rapportino attuale andrà perso.'))return;
   closeModal('modal-archivio');
+
+  // Handle rapportino veloce
+  if(r.tipo==='veloce'){
+    stateVeloce={
+      interventi:JSON.parse(JSON.stringify(r.interventi||[])),
+      data:r.data||todayStr(),
+      _reopenedId:r.id
+    };
+    showView('veloce');
+    renderRapportinoVeloce();
+    const banner=document.createElement('div');
+    banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none;';
+    banner.textContent='📂 Rapportino veloce riaperto';
+    document.body.appendChild(banner);
+    setTimeout(()=>banner.remove(),2800);
+    return;
+  }
   // Migrate old material structure if needed
   let interventi=r.interventi||[];
   if((r.materiali||[]).length>0 && interventi.length>0){
@@ -2837,7 +3045,11 @@ function pdfDaArchivio(i){
     interventi=interventi.map(inv=>({...inv,materiali:(inv.materiali||[]).map(a=>{const m=mats[a.matIdx];return m?{codice:m.codice,descrizione:m.descrizione,quantita:a.qty||1,isDDT:m.isDDT||false}:null;}).filter(Boolean)}));
   }
   state={...state,
-    cliente:r.cliente||'', cantiere:r.cantiere||'', data:r.data||'',
+    cliente:r.cliente||(interventi[0]?.cliente)||'',
+    cantiere:r.cantiere||(interventi[0]?.cantiere)||'',
+    clienteIndirizzo:r.clienteIndirizzo||'',
+    clienteCfpi:r.clienteCfpi||'',
+    data:r.data||'',
     nomi:r.nomi||[], materiali:[], interventi,
     discarica:r.discarica||{batterie:'',ferro:'',caviRame:'',tubiNeon:'',plasticaRigida:'',imballaggi:'',lampadine:'',cartone:''},
     automezzo:r.automezzo||'', km:r.km||'', uscita:r.uscita||'',
@@ -2851,9 +3063,64 @@ function stampaDaArchivio(i){
   const r=_archivioData[i];
   markAsPrinted(r.id);
   renderArchivio();
+
+  // If rapportino veloce, use veloce print format
+  if(r.tipo==='veloce'){
+    const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT'):'';
+    const logoSrc=getLogoSrc();
+    const rows=(r.interventi||[]).map((inv,i)=>`
+      <tr style="${i%2?'background:#f8f8f8;':''}">
+        <td style="padding:6px 8px;">
+          <div style="font-size:12px;">${inv.descrizione||''}</div>
+          <div style="font-size:10px;color:#1a3a5c;font-weight:700;margin-top:3px;">${inv.cliente||'—'} — ${inv.cantiere||'—'}${inv.sottocommessa?' ('+inv.sottocommessa+')':''}</div>
+          <div style="font-size:10px;color:#666;">👤 ${inv.tecnico||'—'}</div>
+        </td>
+        <td style="padding:6px 8px;text-align:center;font-weight:700;white-space:nowrap;vertical-align:top;">${inv.ore||'—'}</td>
+      </tr>`).join('');
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Rapportino Veloce ${df}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:8mm;}
+      .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #1a3a5c;}
+      .logo-side{display:flex;flex-direction:column;gap:3px;}
+      .logo-box{background:#1a3a5c;padding:4px 8px;border-radius:4px;display:inline-block;}
+      .logo-box img{height:28px;display:block;filter:brightness(0) invert(1);}
+      .co{font-size:7px;line-height:1.6;color:#555;}
+      h2{font-size:13px;color:#1a3a5c;margin:0 0 3px;}
+      table{width:100%;border-collapse:collapse;}
+      th{background:#1a3a5c;color:#fff;padding:5px 8px;text-align:left;font-size:10px;}
+      td{border-bottom:1px solid #e8e8e8;vertical-align:top;}
+      @page{size:A4 portrait;margin:8mm;}
+    </style></head><body>
+    <div class="hdr">
+      <div class="logo-side">
+        <div class="logo-box"><img src="${logoSrc}" alt="logo"></div>
+        <div class="co">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV) — TEL 0422 608239</div>
+      </div>
+      <div style="text-align:right;">
+        <h2>RAPPORTINO VELOCE</h2>
+        <div style="font-size:11px;"><strong>DATA:</strong> ${df}</div>
+      </div>
+    </div>
+    <table>
+      <tr>
+        <th>INTERVENTO / CLIENTE / CANTIERE / TECNICO</th>
+        <th style="width:55px;text-align:center;">ORE</th>
+      </tr>
+      ${rows}
+    </table>
+    <script>window.addEventListener('load',()=>{setTimeout(()=>window.print(),300);});<\/script>
+    </body></html>`;
+    const win=window.open('','_blank','width=900,height=700');
+    if(win){win.document.write(html);win.document.close();}else alert('Abilita i popup');
+    return;
+  }
   const df=r.data?new Date(r.data+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
   const disc=r.discarica||{};
   const logoSrc=getLogoSrc();
+  // Fallback: try to get cliente/cantiere from interventi if top-level fields are empty
+  const cliente=r.cliente||(r.interventi&&r.interventi[0]?.cliente)||'—';
+  const cantiere=r.cantiere||(r.interventi&&r.interventi[0]?.cantiere)||'—';
 
   // Build material rows (new structure: materials inside each intervento)
   const matRows=[];
@@ -2900,10 +3167,10 @@ function stampaDaArchivio(i){
       <div class="co" style="font-size:8px;color:#555;line-height:1.6;">VICOLO G. VERDI 14/1 — 31050 VILLORBA (TV)<br>TEL/FAX 0422 608239 — CELL. 348 8406250 — info@zanattadaniele.it</div>
     </div>
     <div class="ttl">
-      <div class="cli"><strong>CLIENTE:</strong> ${r.cliente||'—'}</div>
+      <div class="cli"><strong>CLIENTE:</strong> ${cliente}</div>
       ${r.clienteIndirizzo?`<div style="font-size:10px;color:#555;">${r.clienteIndirizzo}</div>`:''}
       ${r.clienteCfpi?`<div style="font-size:10px;color:#555;">CF/PI: ${r.clienteCfpi}</div>`:''}
-      <div class="cli"><strong>CANTIERE:</strong> ${r.cantiere||'—'}</div>
+      <div class="cli"><strong>CANTIERE:</strong> ${cantiere}</div>
     </div>
   </div>
   <div class="info">
@@ -3287,22 +3554,21 @@ function addManualMaterial(){
   const desc=document.getElementById('manual-mat-desc').value.trim();
   const qty=parseFloat(document.getElementById('manual-mat-qty').value)||0;
   if(!code||!desc||qty<=0){alert('Compila tutti i campi (quantità > 0)');return;}
-  // Save to custom listino
-  const custom=DB.get('listino_custom',[]);
-  if(!custom.find(x=>x.c===code)){
-    custom.push({c:code,d:desc});
-    DB.set('listino_custom',custom);
-    if(listinoData) listinoData.unshift({c:code,d:desc,custom:true});
-  }
   if(_currentInvIdx===-1){
-    // Richiesta materiali
+    // Richiesta materiali - NO save to listino
     stateMaternali.materiali.push({codice:code,descrizione:desc,quantita:qty});
     document.getElementById('manual-mat-code').value='';
     document.getElementById('manual-mat-desc').value='';
     document.getElementById('manual-mat-qty').value='';
     closeModal('modal-mat-manual');renderRichiestaMaternali();
   } else {
-    // Rapportino normale
+    // Rapportino normale - save to custom listino
+    const custom=DB.get('listino_custom',[]);
+    if(!custom.find(x=>x.c===code)){
+      custom.push({c:code,d:desc});
+      DB.set('listino_custom',custom);
+      if(listinoData) listinoData.unshift({c:code,d:desc,custom:true});
+    }
     const invIdx=_currentInvIdx||0;
     if(!state.interventi[invIdx]) state.interventi[invIdx]={descrizione:'',ore:0,sottocommessa:'',materiali:[],_matSearch:null};
     if(!state.interventi[invIdx].materiali) state.interventi[invIdx].materiali=[];
