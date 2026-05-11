@@ -418,6 +418,16 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
         </div>
       </div>
 
+      <!-- BACKUP SECTION -->
+      <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;">💾 Backup Dati</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">
+          Scarica un file JSON con clienti, cantieri, sottocommesse e l'elenco di tutti i rapportini salvati.
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="eseguiBackup()">📥 Scarica backup completo</button>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Consigliato farlo periodicamente e conservare il file in un posto sicuro.</div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn btn-danger btn-sm" onclick="handleLogout()">🚪 Esci</button>
         <button class="btn btn-outline btn-sm" onclick="adminClose()">Chiudi</button>
@@ -676,22 +686,16 @@ async function initAppData(){
   // Load cc and nomi from Firestore into cache
   try{
     const cc = await fsGet('settings','cc');
-    if(cc) LC.set('cc', cc);
-    else {
-      // First time: seed default data
-      const defaultCC=[
-        {c:"aaa",s:"xxx",sub:["ppp"]},{c:"aa",s:"yyy",sub:[]},
-        {c:"bb",s:"xxx",sub:[]},{c:"bb",s:"zzz",sub:[]},{c:"ccc",s:"www",sub:[]}
-      ];
-      await fsSetWithCache('cc', defaultCC);
+    if(cc && Array.isArray(cc) && cc.length>0){
+      LC.set('cc', cc);
     }
+    // NEVER overwrite with defaults - only load what's there
+
     const nomi = await fsGet('settings','nomi');
-    if(nomi) LC.set('nomi', nomi);
-    else await fsSetWithCache('nomi',["Mario Rossi","Luca Bianchi","Paolo Verdi"]);
+    if(nomi && Array.isArray(nomi) && nomi.length>0) LC.set('nomi', nomi);
 
     const lc = await fsGet('settings','listino_custom');
     if(lc) LC.set('listino_custom', lc);
-    else await fsSetWithCache('listino_custom',[]);
 
     const logo = await fsGet('settings','custom_logo');
     if(logo){
@@ -1929,19 +1933,20 @@ function generatePDFPortrait(){
   const TW=W-ML-MR;
 
   // Nomi
-  drawPDFTable(doc,ML,y,TW,['NOME TECNICO','ORE'],state.nomi.map(n=>[n.nome,n.ore+'h']),[130,null]);
-  y+=6+state.nomi.length*8;if(y>H-30){doc.addPage();y=10;}
+  y+=drawPDFTable(doc,ML,y,TW,['NOME TECNICO','ORE'],
+    state.nomi.map(n=>[n.nome,n.ore+'h']),[130,null]);
+  if(y>H-30){doc.addPage();y=10;}
 
   // Interventi
-  drawPDFTable(doc,ML,y,TW,['DESCRIZIONE INTERVENTO','ORE','SOTTOCOMMESSA'],
+  y+=drawPDFTable(doc,ML,y,TW,['DESCRIZIONE INTERVENTO','ORE','SOTTOCOMMESSA'],
     state.interventi.map(inv=>[inv.descrizione,inv.ore+'h',inv.sottocommessa||'—']));
-  y+=6+state.interventi.length*8;if(y>H-30){doc.addPage();y=10;}
+  if(y>H-30){doc.addPage();y=10;}
 
   // Materiali
   const matRows=buildMatRows();
   if(matRows.length>0){
-    drawPDFTable(doc,ML,y,TW,['CODICE','DESCRIZIONE MATERIALI','QTÀ','SOTTOCOMMESSA'],matRows,[28,null,12,45]);
-    y+=6+matRows.length*8;if(y>H-30){doc.addPage();y=10;}
+    y+=drawPDFTable(doc,ML,y,TW,['CODICE','DESCRIZIONE MATERIALI','QTÀ','SOTTOCOMMESSA'],matRows,[28,null,12,45]);
+    if(y>H-30){doc.addPage();y=10;}
   }
 
   // Discarica — 2 rows of 5 + RC/RDDT boxes
@@ -1985,21 +1990,33 @@ function drawPDFTable(doc,x,y,totalW,headers,rows,colW=null){
   const n=headers.length;
   const defaultW=totalW/n;
   const widths=colW?colW.map(w=>w||totalW-colW.filter(Boolean).reduce((s,v)=>s+v,0)):headers.map(()=>defaultW);
-  const HDR_H=6; const ROW_H=8;
+  const HDR_H=6;
   doc.setFillColor(26,58,92);doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont(undefined,'bold');
   let cx=x;
   headers.forEach((h,i)=>{doc.rect(cx,y,widths[i],HDR_H,'F');doc.text(h,cx+1,y+4);cx+=widths[i];});
   doc.setTextColor(0,0,0);doc.setFont(undefined,'normal');doc.setFontSize(9);
+  let totalH=HDR_H;
   rows.forEach((row,ri)=>{
-    const ry=y+HDR_H+ri*ROW_H;
+    // Calculate row height based on max lines in any cell
+    const cellLines=row.map((cell,ci)=>doc.splitTextToSize(String(cell||''),widths[ci]-2));
+    const maxLines=Math.max(...cellLines.map(l=>l.length));
+    const ROW_H=Math.max(8, maxLines*4.5+3);
+    const ry=y+totalH;
     cx=x;
     if(ri%2===0){doc.setFillColor(245,247,250);doc.rect(x,ry,totalW,ROW_H,'F');}
-    row.forEach((cell,ci)=>{
-      const txt=doc.splitTextToSize(String(cell||''),widths[ci]-2);
-      doc.text(txt[0]||'',cx+1,ry+5.5);cx+=widths[ci];
+    cellLines.forEach((lines,ci)=>{
+      lines.forEach((line,li)=>{
+        doc.text(line,cx+1,ry+4.5+li*4.5);
+      });
+      cx+=widths[ci];
     });
+    // Draw bottom border
+    doc.setDrawColor(220,220,220);
+    doc.line(x,ry+ROW_H,x+totalW,ry+ROW_H);
+    doc.setDrawColor(0,0,0);
+    totalH+=ROW_H;
   });
-  return HDR_H+rows.length*ROW_H;
+  return totalH;
 }
 
 async function saveAndNew(){
@@ -3709,6 +3726,50 @@ async function adminDeleteUser(uid, email){
     await renderAdminUserList();
     alert('Utente rimosso. Per sicurezza completa, vai su Firebase Console → Authentication → Utenti e disabilita o elimina manualmente l\'account '+email);
   }catch(e){hideLoading();alert('Errore: '+e.message);}
+}
+
+async function eseguiBackup(){
+  showLoading('Backup in corso...');
+  try{
+    // Load cc (clienti/cantieri/sottocommesse)
+    const cc = await fsGet('settings','cc') || LC.get('cc',[]);
+    const nomi = await fsGet('settings','nomi') || LC.get('nomi',[]);
+
+    // Load all rapportini
+    const snap = await db.collection('rapportini').orderBy('savedAt','desc').get();
+    const rapportini = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+    const backup = {
+      exportDate: new Date().toISOString(),
+      exportedBy: currentUserEmail||'',
+      clientiCantieri: cc,
+      nomiTecnici: nomi,
+      rapportini: rapportini,
+      totale: {
+        clienti: [...new Set((cc||[]).map(r=>r.c))].length,
+        cantieri: (cc||[]).length,
+        rapportini: rapportini.length
+      }
+    };
+
+    // Download as JSON file
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `backup_zanatta_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    hideLoading();
+    alert(`✓ Backup completato!\n\n• ${backup.totale.clienti} clienti\n• ${backup.totale.cantieri} cantieri/commesse\n• ${backup.totale.rapportini} rapportini`);
+  }catch(e){
+    hideLoading();
+    alert('Errore backup: '+e.message);
+  }
 }
 
 function adminClose(){
